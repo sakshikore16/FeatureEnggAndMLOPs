@@ -1,0 +1,9 @@
+stages:
+  train:
+    cmd: python train.py
+    deps:
+      - data/raw/spotify_2023.csv
+      - features.py
+      - train.py
+    outs:
+      - models/spotify_pipeline.joblib
