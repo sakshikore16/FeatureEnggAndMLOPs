@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - StreamPulse Test & Docker Build
+name: CI/CD Pipeline - Test & Docker Build
 
 on:
   push:
@@ -35,6 +35,9 @@ jobs:
     name: Build & Push Docker Image to Docker Hub
     needs: test
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -42,22 +45,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub (if secrets provided)
-        if: env.DOCKERHUB_USERNAME != ''
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: ./MiniProject
           file: ./MiniProject/Dockerfile
-          push: ${{ env.DOCKERHUB_USERNAME != '' }}
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/spotify-metrics:latest', secrets.DOCKERHUB_USERNAME) || 'spotify-metrics:latest' }}
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          push: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+          tags: ${{ env.DOCKERHUB_USERNAME != '' && format('{0}/spotify-metrics:latest', env.DOCKERHUB_USERNAME) || 'spotify-metrics:latest' }}
