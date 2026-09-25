@@ -1,5 +1,5 @@
 """
-StreamPulse - Interactive Music Analytics & Streaming Hit Forecaster.
+Spotify Stream Metrics - Interactive Music Analytics & Streaming Forecaster.
 Spotify-inspired dark theme UI connecting to FastAPI backend with local model fallback.
 """
 
@@ -13,7 +13,7 @@ import streamlit as st
 
 # Page Configuration
 st.set_page_config(
-    page_title="StreamPulse | Spotify Stream Forecaster",
+    page_title="Spotify Stream Metrics",
     page_icon="🎵",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -256,8 +256,8 @@ track_profiles = {
 
 # --- Sidebar ---
 st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg", width=50)
-st.sidebar.title("StreamPulse AI")
-st.sidebar.caption("Spotify Hit Potential & Stream Forecaster")
+st.sidebar.title("Spotify Stream Metrics")
+st.sidebar.caption("Music Analytics & Stream Forecaster")
 
 st.sidebar.markdown("### 🎧 Choose a Song to Test")
 selected_preset_name = st.sidebar.selectbox(
@@ -276,7 +276,7 @@ with st.sidebar.expander("ℹ️ How Does This System Work?"):
     """)
 
 # --- Main Page Layout ---
-st.markdown("<div class='main-header'>🎵 StreamPulse: Song Stream Forecaster</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-header'>🎵 Spotify Stream Metrics</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-header'>Predict total Spotify streams and hit potential based on song audio traits, release timing, and cross-platform playlist traction.</div>", unsafe_allow_html=True)
 
 # If a real song is chosen, show its actual Spotify recorded streams

@@ -1,5 +1,5 @@
 """
-StreamPulse Music Analytics - FastAPI Microservice
+Spotify Stream Metrics - FastAPI Microservice
 Serves real-time Spotify song stream predictions and hit potential tiering.
 """
 
@@ -19,7 +19,7 @@ if project_root not in sys.path:
 from features import SpotifyFeatureCreator
 
 app = FastAPI(
-    title="StreamPulse Music Forecasting API",
+    title="Spotify Stream Metrics API",
     description="Microservice providing real-time Spotify stream forecasts and hit potential classification.",
     version="1.0.0"
 )
@@ -127,7 +127,7 @@ def health_check():
     model_loaded = os.path.exists(MODEL_PATH)
     return {
         "status": "healthy",
-        "service": "StreamPulse Music API",
+        "service": "Spotify Stream Metrics API",
         "version": "1.0.0",
         "model_loaded": model_loaded
     }
