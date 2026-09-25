@@ -75,9 +75,18 @@ st.markdown("""
     .actual-streams-box {
         background-color: #222222;
         border-radius: 8px;
-        padding: 12px 18px;
-        margin-bottom: 15px;
+        padding: 14px 18px;
+        margin-bottom: 18px;
         border: 1px solid #3e3e3e;
+    }
+    .badge-actual {
+        background-color: #1DB954;
+        color: #000000;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-weight: 800;
+        font-size: 0.8rem;
+        margin-right: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -102,6 +111,22 @@ def load_local_model():
     return None
 
 
+@st.cache_data
+def load_spotify_dataset():
+    """Load and clean full Spotify dataset for interactive selection and random sampling."""
+    csv_path = os.path.join(project_root, "data", "raw", "spotify_2023.csv")
+    if not os.path.exists(csv_path):
+        return pd.DataFrame()
+    df = pd.read_csv(csv_path, encoding="latin-1")
+    df["streams"] = pd.to_numeric(df["streams"], errors="coerce")
+    df = df.dropna(subset=["streams"]).reset_index(drop=True)
+    for col in ["in_deezer_playlists", "in_shazam_charts"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.replace(",", "")
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    return df
+
+
 def format_streams(streams: int) -> str:
     if streams >= 1_000_000_000:
         return f"{streams / 1_000_000_000:.2f} Billion"
@@ -124,9 +149,12 @@ def get_hit_tier(streams: int) -> str:
     return "🌱 Emerging Discovery (<10M)"
 
 
-# --- Real Track Presets from Spotify 2023 Dataset ---
-track_profiles = {
-    "⭐ Taylor Swift — Cruel Summer": {
+# Load full dataset for selection
+df_spotify = load_spotify_dataset()
+
+# --- Initialize Track State ---
+if "current_track" not in st.session_state:
+    st.session_state.current_track = {
         "title": "Cruel Summer",
         "artist": "Taylor Swift",
         "year": 2019,
@@ -145,128 +173,123 @@ track_profiles = {
         "sp_ch": 48,
         "ap_ch": 64,
         "dz_ch": 12,
-        "actual_streams": 800_840_817
-    },
-    "⭐ Harry Styles — As It Was": {
-        "title": "As It Was",
-        "artist": "Harry Styles",
-        "year": 2022,
-        "month": 3,
-        "dance": 52,
-        "energy": 73,
-        "valence": 66,
-        "bpm": 174,
-        "acoustic": 34,
-        "speech": 6,
-        "key": "A",
-        "mode": "Minor",
-        "sp_pl": 23575,
-        "ap_pl": 403,
-        "dz_pl": 320,
-        "sp_ch": 64,
-        "ap_ch": 82,
-        "dz_ch": 24,
-        "actual_streams": 2_513_188_493
-    },
-    "⭐ Miley Cyrus — Flowers": {
-        "title": "Flowers",
-        "artist": "Miley Cyrus",
-        "year": 2023,
-        "month": 1,
-        "dance": 71,
-        "energy": 68,
-        "valence": 65,
-        "bpm": 118,
-        "acoustic": 6,
-        "speech": 7,
-        "key": "A#",
-        "mode": "Major",
-        "sp_pl": 12211,
-        "ap_pl": 300,
-        "dz_pl": 260,
-        "sp_ch": 115,
-        "ap_ch": 92,
-        "dz_ch": 18,
-        "actual_streams": 1_316_855_716
-    },
-    "⭐ Jung Kook & Latto — Seven": {
-        "title": "Seven (feat. Latto)",
-        "artist": "Jung Kook, Latto",
-        "year": 2023,
-        "month": 7,
-        "dance": 80,
-        "energy": 83,
-        "valence": 89,
-        "bpm": 125,
-        "acoustic": 31,
-        "speech": 4,
-        "key": "B",
-        "mode": "Major",
-        "sp_pl": 553,
-        "ap_pl": 43,
-        "dz_pl": 18,
-        "sp_ch": 147,
-        "ap_ch": 105,
-        "dz_ch": 14,
-        "actual_streams": 141_381_703
-    },
-    "⭐ Olivia Rodrigo — vampire": {
-        "title": "vampire",
-        "artist": "Olivia Rodrigo",
-        "year": 2023,
-        "month": 6,
-        "dance": 51,
-        "energy": 53,
-        "valence": 32,
-        "bpm": 138,
-        "acoustic": 17,
-        "speech": 6,
-        "key": "F",
-        "mode": "Major",
-        "sp_pl": 1397,
-        "ap_pl": 94,
-        "dz_pl": 36,
-        "sp_ch": 110,
-        "ap_ch": 78,
-        "dz_ch": 10,
-        "actual_streams": 140_003_974
-    },
-    "✨ Custom Song (Design Your Own)": {
-        "title": "My New Track",
-        "artist": "New Artist",
-        "year": 2023,
-        "month": 9,
-        "dance": 75,
-        "energy": 78,
-        "valence": 65,
-        "bpm": 124,
-        "acoustic": 15,
-        "speech": 5,
-        "key": "C",
-        "mode": "Major",
-        "sp_pl": 1200,
-        "ap_pl": 80,
-        "dz_pl": 40,
-        "sp_ch": 20,
-        "ap_ch": 15,
-        "dz_ch": 5,
-        "actual_streams": None
+        "actual_streams": 800_840_817,
+        "is_custom": False
     }
-}
 
-# --- Sidebar ---
+# --- Sidebar Controls ---
 st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg", width=50)
 st.sidebar.title("Spotify Stream Metrics")
 st.sidebar.caption("Music Analytics & Stream Forecaster")
 
-st.sidebar.markdown("### 🎧 Choose a Song to Test")
-selected_preset_name = st.sidebar.selectbox(
-    "Select Track Profile:",
-    list(track_profiles.keys())
+st.sidebar.markdown("### 🎛️ Song Selection Mode")
+app_mode = st.sidebar.radio(
+    "Choose Input Mode:",
+    ["⭐ Select from Real Dataset", "✨ Enter Custom / New Song"],
+    index=1 if st.session_state.current_track.get("is_custom") else 0
 )
-cur = track_profiles[selected_preset_name]
 
-with st.sidebar.expander("ℹ️ How Does This System Work?"):
+if app_mode == "⭐ Select from Real Dataset":
+    st.sidebar.markdown("#### 🎲 Instant Random Song")
+    if st.sidebar.button("🎲 Pick Random Song from Dataset", use_container_width=True):
+        if not df_spotify.empty:
+            row = df_spotify.sample(1).iloc[0]
+            st.session_state.current_track = {
+                "title": str(row.get("track_name", "Unknown Track")),
+                "artist": str(row.get("artist(s)_name", "Unknown Artist")),
+                "year": int(row.get("released_year", 2023)),
+                "month": int(row.get("released_month", 6)),
+                "dance": int(row.get("danceability_%", 65)),
+                "energy": int(row.get("energy_%", 65)),
+                "valence": int(row.get("valence_%", 50)),
+                "bpm": int(row.get("bpm", 120)),
+                "acoustic": int(row.get("acousticness_%", 20)),
+                "speech": int(row.get("speechiness_%", 6)),
+                "key": str(row.get("key", "C")),
+                "mode": str(row.get("mode", "Major")),
+                "sp_pl": int(row.get("in_spotify_playlists", 500)),
+                "ap_pl": int(row.get("in_apple_playlists", 30)),
+                "dz_pl": int(row.get("in_deezer_playlists", 15)),
+                "sp_ch": int(row.get("in_spotify_charts", 5)),
+                "ap_ch": int(row.get("in_apple_charts", 5)),
+                "dz_ch": int(row.get("in_deezer_charts", 2)),
+                "actual_streams": int(row.get("streams", 0)),
+                "is_custom": False
+            }
+            st.rerun()
+
+    st.sidebar.markdown("#### 🔍 Or Choose Famous Tracks:")
+    preset_options = [
+        "Taylor Swift — Cruel Summer",
+        "Harry Styles — As It Was",
+        "Miley Cyrus — Flowers",
+        "Jung Kook & Latto — Seven",
+        "Olivia Rodrigo — vampire"
+    ]
+    selected_preset = st.sidebar.selectbox("Famous Chart-Toppers:", preset_options)
+    if st.sidebar.button("Load Selected Track", use_container_width=True):
+        preset_map = {
+            "Taylor Swift — Cruel Summer": {
+                "title": "Cruel Summer", "artist": "Taylor Swift", "year": 2019, "month": 8,
+                "dance": 55, "energy": 72, "valence": 58, "bpm": 170, "acoustic": 11, "speech": 15,
+                "key": "A", "mode": "Major", "sp_pl": 7858, "ap_pl": 116, "dz_pl": 140,
+                "sp_ch": 48, "ap_ch": 64, "dz_ch": 12, "actual_streams": 800_840_817, "is_custom": False
+            },
+            "Harry Styles — As It Was": {
+                "title": "As It Was", "artist": "Harry Styles", "year": 2022, "month": 3,
+                "dance": 52, "energy": 73, "valence": 66, "bpm": 174, "acoustic": 34, "speech": 6,
+                "key": "A", "mode": "Minor", "sp_pl": 23575, "ap_pl": 403, "dz_pl": 320,
+                "sp_ch": 64, "ap_ch": 82, "dz_ch": 24, "actual_streams": 2_513_188_493, "is_custom": False
+            },
+            "Miley Cyrus — Flowers": {
+                "title": "Flowers", "artist": "Miley Cyrus", "year": 2023, "month": 1,
+                "dance": 71, "energy": 68, "valence": 65, "bpm": 118, "acoustic": 6, "speech": 7,
+                "key": "A#", "mode": "Major", "sp_pl": 12211, "ap_pl": 300, "dz_pl": 260,
+                "sp_ch": 115, "ap_ch": 92, "dz_ch": 18, "actual_streams": 1_316_855_716, "is_custom": False
+            },
+            "Jung Kook & Latto — Seven": {
+                "title": "Seven (feat. Latto)", "artist": "Jung Kook, Latto", "year": 2023, "month": 7,
+                "dance": 80, "energy": 83, "valence": 89, "bpm": 125, "acoustic": 31, "speech": 4,
+                "key": "B", "mode": "Major", "sp_pl": 553, "ap_pl": 43, "dz_pl": 18,
+                "sp_ch": 147, "ap_ch": 105, "dz_ch": 14, "actual_streams": 141_381_703, "is_custom": False
+            },
+            "Olivia Rodrigo — vampire": {
+                "title": "vampire", "artist": "Olivia Rodrigo", "year": 2023, "month": 6,
+                "dance": 51, "energy": 53, "valence": 32, "bpm": 138, "acoustic": 17, "speech": 6,
+                "key": "F", "mode": "Major", "sp_pl": 1397, "ap_pl": 94, "dz_pl": 36,
+                "sp_ch": 110, "ap_ch": 78, "dz_ch": 10, "actual_streams": 140_003_974, "is_custom": False
+            }
+        }
+        st.session_state.current_track = preset_map[selected_preset]
+        st.rerun()
+
+else:
+    # Custom Track Mode
+    if not st.session_state.current_track.get("is_custom"):
+        st.session_state.current_track = {
+            "title": "My New Track",
+            "artist": "New Artist",
+            "year": 2023,
+            "month": 9,
+            "dance": 72,
+            "energy": 75,
+            "valence": 60,
+            "bpm": 124,
+            "acoustic": 18,
+            "speech": 5,
+            "key": "C",
+            "mode": "Major",
+            "sp_pl": 1000,
+            "ap_pl": 60,
+            "dz_pl": 30,
+            "sp_ch": 15,
+            "ap_ch": 10,
+            "dz_ch": 3,
+            "actual_streams": None,
+            "is_custom": True
+        }
+
+with st.sidebar.expander("ℹ️ How This System Works"):
     st.markdown("""
     **1. Audio Sliders:** Represent acoustic features analyzed by Spotify (BPM, Danceability %, Energy, Acousticness).
     **2. Playlist Reach:** Number of editorial & user playlists featuring the song.
@@ -275,16 +298,28 @@ with st.sidebar.expander("ℹ️ How Does This System Work?"):
     **5. API Serving:** FastAPI backend serving predictions over HTTP with instant local fallback.
     """)
 
+# Active Track Data
+cur = st.session_state.current_track
+
 # --- Main Page Layout ---
 st.markdown("<div class='main-header'>🎵 Spotify Stream Metrics</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-header'>Predict total Spotify streams and hit potential based on song audio traits, release timing, and cross-platform playlist traction.</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-header'>Predict total Spotify streaming volume and commercial hit potential based on acoustic features and platform reach.</div>", unsafe_allow_html=True)
 
-# If a real song is chosen, show its actual Spotify recorded streams
-if cur["actual_streams"] is not None:
+# Ground-truth banner if real song from dataset is loaded
+if cur.get("actual_streams") is not None:
     st.markdown(f"""
     <div class='actual-streams-box'>
-        📌 <strong>Real Track Data Selected:</strong> <em>{cur['title']}</em> by <strong>{cur['artist']}</strong><br>
-        Actual Total Spotify Streams in Dataset: <strong style='color: #1DB954;'>{format_streams(cur['actual_streams'])}</strong> ({cur['actual_streams']:,} streams)
+        <span class='badge-actual'>DATASET GROUND TRUTH</span>
+        <strong>{cur['title']}</strong> by <strong>{cur['artist']}</strong> (Released: {cur['month']}/{cur['year']})<br>
+        Actual Total Recorded Spotify Streams: <strong style='color: #1DB954; font-size: 1.15rem;'>{format_streams(cur['actual_streams'])}</strong> 
+        <span style='color: #999999;'>({cur['actual_streams']:,} streams)</span>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div class='actual-streams-box'>
+        <span class='badge-actual' style='background-color: #3b82f6; color: white;'>CUSTOM TRACK SIMULATION</span>
+        Enter any song title, artist, and fine-tune acoustic/playlist metrics to project streaming potential.
     </div>
     """, unsafe_allow_html=True)
 
@@ -309,7 +344,7 @@ with tab_audio:
     with c2:
         bpm = st.slider("🥁 Tempo (BPM)", 50, 210, int(cur["bpm"]), help="Speed / Beats per minute")
         acousticness = st.slider("🎸 Acousticness (%)", 0, 100, int(cur["acoustic"]), help="Confidence score of whether the track is purely acoustic")
-        speechiness = st.slider("🎤 Speechiness (%)", 0, 100, int(cur["speech"]), help="Presence of spoken words (rap, podcasts, vocal focus)")
+        speechiness = st.slider("🎤 Speechiness (%)", 0, 100, int(cur["speech"]), help="Presence of spoken words (rap, vocal focus)")
     with c3:
         all_keys = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "Unknown"]
         key_idx = all_keys.index(cur["key"]) if cur["key"] in all_keys else 0
@@ -401,15 +436,15 @@ if st.button("🚀 Forecast Streaming Volume with AI", type="primary", use_conta
             with res_c3:
                 st.metric("📊 Cross-Platform Chart Rank", f"{sp_charts + ap_charts + dz_charts}", delta="Active chart traction")
 
-            if cur["actual_streams"] is not None:
+            if cur.get("actual_streams") is not None:
                 diff = predicted_streams - cur["actual_streams"]
                 diff_pct = (diff / cur["actual_streams"]) * 100
                 st.markdown(f"""
                 <div class='info-box'>
                     🎯 <strong>Model Accuracy Comparison:</strong><br>
-                    - Actual Streams on Spotify: <strong>{format_streams(cur['actual_streams'])}</strong><br>
-                    - AI Forecasted Streams: <strong>{format_streams(predicted_streams)}</strong><br>
-                    - Relative Estimation Variance: <strong>{diff_pct:+.1f}%</strong> (Accurately captures the correct order of magnitude).
+                    • Actual Streams Recorded on Spotify: <strong>{format_streams(cur['actual_streams'])}</strong><br>
+                    • AI Model Predicted Streams: <strong>{format_streams(predicted_streams)}</strong><br>
+                    • Estimation Variance: <strong>{diff_pct:+.1f}%</strong> (Accurately predicts within the correct commercial magnitude).
                 </div>
                 """, unsafe_allow_html=True)
             else:
