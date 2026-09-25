@@ -56,6 +56,5 @@ jobs:
 
       - name: Push to Docker Hub
         if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
-        continue-on-error: true
         run: |
           docker push sakshi1609/spotify-metrics:latest
