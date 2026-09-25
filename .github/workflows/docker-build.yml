@@ -58,6 +58,6 @@ jobs:
           file: ./MiniProject/Dockerfile
           push: ${{ env.DOCKERHUB_USERNAME != '' }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/streampulse:latest', secrets.DOCKERHUB_USERNAME) || 'streampulse:latest' }}
+            ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/spotify-metrics:latest', secrets.DOCKERHUB_USERNAME) || 'spotify-metrics:latest' }}
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
