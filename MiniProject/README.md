@@ -90,7 +90,6 @@ MiniProject/
 │   └── workflows/
 │       └── docker-build.yml                    # Automated CI/CD test and build workflow
 ├── requirements.txt                            # Pinned Python dependencies
-├── PITCH_DECK_GUIDE.md                         # 5-7 minute presentation script & talking points
 └── README.md                                   # Comprehensive documentation
 ```
 
@@ -168,7 +167,3 @@ docker run -p 8000:8000 -p 8501:8501 streampulse-api:latest
 | **DVC** | Versions raw data and ties pipeline execution to git commit hashes. | **vs Committing CSV to Git:** Prevents git repositories from becoming bloated with binary datasets. |
 | **Docker Multi-Stage Container** | Packages backend, frontend, models, and dependencies into an identical runtime environment. | **vs Local Virtualenv:** Eliminates "it works on my machine" issues when sharing code or deploying to cloud servers. |
 
----
-
-## 🎤 Presentation Notes
-Refer to [PITCH_DECK_GUIDE.md](PITCH_DECK_GUIDE.md) for a complete 5-to-7 minute speaking script and expected Q&A defense.
