@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Private presentation notes, pitch scripts, and slide decks
+MiniProject/PITCH_DECK_GUIDE.md
+MiniProject/presentation/
+*.pptx
+Assignments.zip
+scratch/
