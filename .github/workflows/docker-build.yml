@@ -42,9 +42,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
@@ -52,10 +49,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./MiniProject
-          file: ./MiniProject/Dockerfile
-          push: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-          tags: ${{ env.DOCKERHUB_USERNAME != '' && format('{0}/spotify-metrics:latest', env.DOCKERHUB_USERNAME) || 'spotify-metrics:latest' }}
+      - name: Build Docker Image
+        run: |
+          cd MiniProject
+          docker build -t ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_USERNAME || 'local' }}/spotify-metrics:latest .
+
+      - name: Push to Docker Hub
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
+        run: |
+          docker push ${{ env.DOCKERHUB_USERNAME }}/spotify-metrics:latest
